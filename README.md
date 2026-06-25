@@ -9,7 +9,9 @@ A professional FAQ chatbot built as a portfolio showcase project. It answers que
 ![License](https://img.shields.io/badge/License-MIT-blue)
 
 ---
+# MariaAIPro — AI Internship Assistant
 
+[![Live Demo](https://img.shields.io/badge/🚀_Live_Demo-Try_MariaAIPro-6C3CE1?style=for-the-badge&logo=github&logoColor=white)](https://mariabatool869-star.github.io/CodeAlpha_AI_MariaAIPro/)
 
 ## Overview
 
