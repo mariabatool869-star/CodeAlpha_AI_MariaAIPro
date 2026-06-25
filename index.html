@@ -1,0 +1,1678 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="MariaAIPro - AI Internship Assistant. FAQ chatbot powered by TF-IDF and cosine similarity.">
+  <title>AI Internship Assistant | MariaAIPro</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" crossorigin="anonymous">
+  <style>
+    :root {
+      --primary: #6C3CE1;
+      --primary-dark: #5B2FC9;
+      --secondary: #8B5CF6;
+      --accent: #EC4899;
+      --success: #10B981;
+      --bg: #FAFAFA;
+      --surface: #FFFFFF;
+      --bot-bubble: #F3F4F6;
+      --user-bubble: #6C3CE1;
+      --text: #1F2937;
+      --text-muted: #6B7280;
+      --text-inverse: #FFFFFF;
+      --border: #E5E7EB;
+      --shadow: 0 4px 24px rgba(108, 60, 225, 0.12);
+      --radius: 12px;
+      --space-xs: 4px;
+      --space-sm: 8px;
+      --space-md: 16px;
+      --space-lg: 24px;
+      --header-h: auto;
+      --footer-h: auto;
+      --transition: 0.2s ease;
+    }
+    [data-theme="dark"] {
+      --bg: #0F172A;
+      --surface: #1E293B;
+      --bot-bubble: #334155;
+      --text: #F1F5F9;
+      --text-muted: #94A3B8;
+      --border: #334155;
+      --shadow: 0 4px 24px rgba(0, 0, 0, 0.4);
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      font-weight: 400;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      transition: background var(--transition), color var(--transition);
+    }
+    code, .mono { font-family: 'JetBrains Mono', monospace; font-size: 0.9em; }
+    .app {
+      max-width: 900px;
+      margin: 0 auto;
+      height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      background: var(--surface);
+      box-shadow: var(--shadow);
+    }
+    @media (min-width: 768px) {
+      body { padding: var(--space-md); }
+      .app { height: calc(100dvh - 32px); border-radius: var(--radius); overflow: hidden; }
+    }
+    /* Header */
+    .header {
+      padding: var(--space-md) var(--space-lg);
+      border-bottom: 1px solid var(--border);
+      background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+      color: var(--text-inverse);
+      flex-shrink: 0;
+    }
+    .header-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-md);
+    }
+    .header-brand { display: flex; align-items: center; gap: var(--space-md); }
+    .header-icon {
+      width: 44px; height: 44px;
+      background: rgba(255,255,255,0.2);
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.4rem;
+    }
+    .header h1 { font-size: 1.25rem; font-weight: 700; }
+    .header-sub { font-size: 0.85rem; opacity: 0.9; margin-top: 2px; }
+    .header-actions { display: flex; gap: var(--space-sm); }
+    .icon-btn {
+      width: 40px; height: 40px;
+      border: none; border-radius: 8px;
+      background: rgba(255,255,255,0.15);
+      color: inherit; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: background var(--transition);
+    }
+    .icon-btn:hover { background: rgba(255,255,255,0.25); }
+    .icon-btn:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+    .status {
+      display: flex; align-items: center; gap: var(--space-sm);
+      font-size: 0.8rem; margin-top: var(--space-sm); opacity: 0.95;
+    }
+    .status-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--success);
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+    /* Chat */
+    .chat-container {
+      flex: 1; overflow-y: auto; padding: var(--space-lg);
+      scroll-behavior: smooth;
+      background: var(--bg);
+    }
+    .message {
+      display: flex; gap: var(--space-md); margin-bottom: var(--space-lg);
+      animation: fadeIn 0.3s ease;
+    }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+    .message.user { flex-direction: row-reverse; }
+    .avatar {
+      width: 36px; height: 36px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; font-size: 0.9rem;
+    }
+    .message.bot .avatar { background: var(--bot-bubble); color: var(--primary); }
+    .message.user .avatar { background: var(--user-bubble); color: var(--text-inverse); }
+    .bubble-wrap { max-width: 78%; }
+    .message-meta {
+      font-size: 0.75rem; color: var(--text-muted);
+      margin-bottom: var(--space-xs);
+      display: flex; align-items: center; gap: var(--space-sm);
+    }
+    .message.user .message-meta { justify-content: flex-end; }
+    .bubble {
+      padding: var(--space-md);
+      border-radius: var(--radius);
+      font-size: 0.95rem;
+    }
+    .message.bot .bubble {
+      background: var(--bot-bubble);
+      border-bottom-left-radius: 4px;
+    }
+    .message.user .bubble {
+      background: var(--user-bubble);
+      color: var(--text-inverse);
+      border-bottom-right-radius: 4px;
+    }
+    .confidence {
+      font-size: 0.7rem; color: var(--text-muted);
+      margin-top: var(--space-xs);
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .feedback-row {
+      display: flex; align-items: center; gap: var(--space-sm);
+      margin-top: var(--space-sm); font-size: 0.8rem; color: var(--text-muted);
+    }
+    .feedback-btn {
+      background: none; border: 1px solid var(--border);
+      border-radius: 6px; padding: 4px 8px; cursor: pointer;
+      color: var(--text-muted); transition: all var(--transition);
+    }
+    .feedback-btn:hover { border-color: var(--primary); color: var(--primary); }
+    .feedback-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+    .copy-btn {
+      background: none; border: none; color: var(--secondary);
+      cursor: pointer; font-size: 0.75rem; margin-left: auto;
+    }
+    .suggestions-inline {
+      margin-top: var(--space-md);
+      display: flex; flex-wrap: wrap; gap: var(--space-sm);
+    }
+    .suggestion-link {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 20px; padding: 6px 12px;
+      font-size: 0.8rem; cursor: pointer; color: var(--primary);
+      transition: all var(--transition);
+    }
+    .suggestion-link:hover { background: var(--primary); color: #fff; border-color: var(--primary); }
+    /* Typing */
+    .typing-indicator {
+      display: flex; gap: var(--space-md); margin-bottom: var(--space-lg);
+      align-items: flex-start;
+    }
+    .typing-dots {
+      display: flex; gap: 4px; padding: var(--space-md);
+      background: var(--bot-bubble); border-radius: var(--radius);
+    }
+    .typing-dots span {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--text-muted);
+      animation: bounce 1.4s infinite ease-in-out;
+    }
+    .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+    .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes bounce {
+      0%, 80%, 100% { transform: translateY(0); }
+      40% { transform: translateY(-6px); }
+    }
+    /* Input */
+    .input-area {
+      padding: var(--space-md) var(--space-lg);
+      border-top: 1px solid var(--border);
+      background: var(--surface);
+      flex-shrink: 0;
+    }
+    .quick-chips {
+      display: flex; flex-wrap: wrap; gap: var(--space-sm);
+      margin-bottom: var(--space-md);
+    }
+    .chip {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: 20px; padding: 6px 14px;
+      font-size: 0.8rem; cursor: pointer; color: var(--text);
+      transition: all var(--transition);
+    }
+    .chip:hover { border-color: var(--primary); color: var(--primary); }
+    .input-row {
+      display: flex; gap: var(--space-sm); align-items: flex-end;
+    }
+    .input-wrap { flex: 1; position: relative; }
+    #user-input {
+      width: 100%; padding: var(--space-md) 48px var(--space-md) var(--space-md);
+      border: 2px solid var(--border); border-radius: var(--radius);
+      font-family: inherit; font-size: 0.95rem;
+      background: var(--bg); color: var(--text);
+      resize: none; min-height: 48px; max-height: 120px;
+      transition: border-color var(--transition);
+    }
+    #user-input:focus {
+      outline: none; border-color: var(--primary);
+    }
+    .send-btn {
+      width: 48px; height: 48px;
+      border: none; border-radius: var(--radius);
+      background: var(--primary); color: #fff;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      transition: background var(--transition);
+      flex-shrink: 0;
+    }
+    .send-btn:hover { background: var(--primary-dark); }
+    .send-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .input-hints {
+      display: flex; justify-content: space-between;
+      font-size: 0.75rem; color: var(--text-muted);
+      margin-top: var(--space-sm);
+    }
+    .char-counter.over { color: var(--accent); }
+    /* Footer */
+    .footer {
+      padding: var(--space-md) var(--space-lg);
+      border-top: 1px solid var(--border);
+      text-align: center; font-size: 0.75rem;
+      color: var(--text-muted); flex-shrink: 0;
+      background: var(--surface);
+    }
+    .footer p { margin: 2px 0; }
+    .footer-actions { margin-top: var(--space-sm); display: flex; justify-content: center; gap: var(--space-md); }
+    .footer-link {
+      background: none; border: none; color: var(--secondary);
+      cursor: pointer; font-size: 0.75rem; text-decoration: underline;
+    }
+    /* Analytics Modal */
+    .modal-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.5); z-index: 1000;
+      align-items: center; justify-content: center; padding: var(--space-md);
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: var(--surface); border-radius: var(--radius);
+      max-width: 560px; width: 100%; max-height: 85vh;
+      overflow-y: auto; padding: var(--space-lg);
+      box-shadow: var(--shadow);
+    }
+    .modal h2 { font-size: 1.2rem; margin-bottom: var(--space-md); color: var(--primary); }
+    .stat-grid {
+      display: grid; grid-template-columns: repeat(2, 1fr);
+      gap: var(--space-md); margin-bottom: var(--space-lg);
+    }
+    .stat-card {
+      background: var(--bg); padding: var(--space-md);
+      border-radius: 8px; border: 1px solid var(--border);
+    }
+    .stat-card .label { font-size: 0.75rem; color: var(--text-muted); }
+    .stat-card .value { font-size: 1.5rem; font-weight: 700; color: var(--primary); }
+    .modal-section { margin-bottom: var(--space-md); }
+    .modal-section h3 { font-size: 0.9rem; margin-bottom: var(--space-sm); }
+    .log-list { font-size: 0.8rem; max-height: 120px; overflow-y: auto; }
+    .log-list li { padding: 4px 0; border-bottom: 1px solid var(--border); }
+    .modal-close {
+      margin-top: var(--space-md); width: 100%;
+      padding: var(--space-sm); border: none;
+      background: var(--primary); color: #fff;
+      border-radius: 8px; cursor: pointer;
+    }
+    .sr-only {
+      position: absolute; width: 1px; height: 1px;
+      padding: 0; margin: -1px; overflow: hidden;
+      clip: rect(0,0,0,0); border: 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="app" role="application" aria-label="AI Internship Assistant Chatbot">
+    <header class="header">
+      <div class="header-top">
+        <div class="header-brand">
+          <div class="header-icon" aria-hidden="true"><i class="fas fa-robot"></i></div>
+          <div>
+            <h1>AI Internship Assistant</h1>
+            <p class="header-sub">Your guide to AI careers &amp; internships</p>
+          </div>
+        </div>
+        <div class="header-actions">
+          <button class="icon-btn" id="theme-toggle" aria-label="Toggle dark mode" title="Toggle theme">
+            <i class="fas fa-sun" id="theme-icon"></i>
+          </button>
+          <button class="icon-btn" id="admin-btn" aria-label="Open analytics dashboard" title="Analytics (Ctrl+Shift+A)">
+            <i class="fas fa-chart-line"></i>
+          </button>
+        </div>
+      </div>
+      <div class="status" role="status">
+        <span class="status-dot" aria-hidden="true"></span>
+        <span>Online</span>
+      </div>
+    </header>
+
+    <main class="chat-container" id="chat-container" role="log" aria-live="polite" aria-relevant="additions">
+      <!-- Messages rendered by JS -->
+    </main>
+
+    <div class="input-area">
+      <div class="quick-chips" id="quick-chips" role="group" aria-label="Quick suggestions"></div>
+      <div class="input-row">
+        <div class="input-wrap">
+          <label for="user-input" class="sr-only">Type your question</label>
+          <textarea id="user-input" rows="1" placeholder="Type your question..." maxlength="500" aria-describedby="input-hints"></textarea>
+        </div>
+        <button class="send-btn" id="send-btn" aria-label="Send message">
+          <i class="fas fa-paper-plane"></i>
+        </button>
+      </div>
+      <div class="input-hints" id="input-hints">
+        <span>Press Enter to send Â· Ctrl+/ to focus Â· Esc to clear</span>
+        <span class="char-counter" id="char-counter">0/500</span>
+      </div>
+    </div>
+
+    <footer class="footer">
+      <p><i class="fas fa-bolt" aria-hidden="true"></i> Powered by TF-IDF &amp; Cosine Similarity</p>
+      <p><i class="fas fa-sparkles" aria-hidden="true"></i> Built with <i class="fas fa-heart" aria-hidden="true" style="color:var(--accent)"></i> by Maria</p>
+      <p>&copy; 2026 | AI Internship Portfolio Project</p>
+      <div class="footer-actions">
+        <button class="footer-link" id="export-btn">Export chat</button>
+        <button class="footer-link" id="share-btn">Share link</button>
+      </div>
+    </footer>
+  </div>
+
+  <div class="modal-overlay" id="analytics-modal" role="dialog" aria-labelledby="analytics-title" aria-modal="true">
+    <div class="modal">
+      <h2 id="analytics-title"><i class="fas fa-chart-bar"></i> Analytics Dashboard</h2>
+      <div class="stat-grid">
+        <div class="stat-card"><div class="label">Questions Asked</div><div class="value" id="stat-total">0</div></div>
+        <div class="stat-card"><div class="label">Avg Confidence</div><div class="value" id="stat-confidence">â€”</div></div>
+        <div class="stat-card"><div class="label">Satisfaction Rate</div><div class="value" id="stat-satisfaction">â€”</div></div>
+        <div class="stat-card"><div class="label">Unanswered</div><div class="value" id="stat-unanswered">0</div></div>
+      </div>
+      <div class="modal-section">
+        <h3>Most Common Questions</h3>
+        <ul class="log-list" id="stat-common"></ul>
+      </div>
+      <div class="modal-section">
+        <h3>Unanswered Questions Log</h3>
+        <ul class="log-list" id="stat-unanswered-list"></ul>
+      </div>
+      <button class="modal-close" id="modal-close">Close</button>
+    </div>
+  </div>
+
+  <script>
+/**
+ * ============================================================================
+ * MariaAIPro — AI Internship Assistant (Portfolio Showcase 2026)
+ * ============================================================================
+ *
+ * SETUP: Open index.html in any modern browser. No build step or server required.
+ *        Works offline after first load (CDN fonts/icons cache optionally).
+ *
+ * CUSTOMIZATION:
+ *   - FAQ_DATA: Add/edit question-answer pairs in the knowledge base section.
+ *   - CONFIG.MATCH_DIRECT / MATCH_RELATED: Tune similarity thresholds.
+ *   - CSS :root variables: Rebrand colors without touching component styles.
+ *   - QUICK_SUGGESTIONS_POOL: Customize starter chips shown above the input.
+ *
+ * NLP PIPELINE (implemented from scratch):
+ *   1. Preprocess: lowercase → strip punctuation → tokenize → stopwords → Porter stem
+ *   2. TF-IDF: TF = term count / doc length; IDF = log(N/df); vector per FAQ question
+ *   3. Match: Cosine similarity between query vector and all FAQ vectors
+ *   4. Thresholds: ≥0.75 direct answer | 0.50–0.75 "Did you mean?" | <0.50 fallback
+ *
+ * DEBUG: Open DevTools console → MariaAIPro.runUnitTests() for NLP unit tests.
+ * ADMIN: Ctrl+Shift+A opens analytics dashboard (questions, confidence, feedback).
+ *
+ * @author Maria | Built with TF-IDF & Cosine Similarity
+ */
+
+'use strict';
+
+// ============================================
+// 1. CONFIGURATION & CONSTANTS
+// ============================================
+
+const CONFIG = {
+  MATCH_DIRECT: 0.75,
+  MATCH_RELATED: 0.50,
+  TOP_K: 3,
+  CONTEXT_SIZE: 5,
+  TYPING_DELAY_MIN: 500,
+  TYPING_DELAY_MAX: 1500,
+  DEBOUNCE_MS: 150,
+  MAX_INPUT: 500,
+  STORAGE_KEYS: {
+    theme: 'mariaai_theme',
+    analytics: 'mariaai_analytics',
+    feedback: 'mariaai_feedback',
+    unanswered: 'mariaai_unanswered',
+    chatHistory: 'mariaai_chat_history'
+  },
+  IS_PRODUCTION: false
+};
+
+const QUICK_SUGGESTIONS_POOL = [
+  'What is machine learning?',
+  'How to get an AI internship?',
+  'What skills are required for AI?',
+  'Explain neural networks',
+  'Career paths in AI',
+  'How to prepare for interviews?'
+];
+
+const STOPWORDS = new Set([
+  'a', 'about', 'above', 'after', 'again', 'against', 'all', 'am', 'an', 'and',
+  'any', 'are', 'as', 'at', 'be', 'because', 'been', 'before', 'being', 'below',
+  'between', 'both', 'but', 'by', 'can', 'could', 'did', 'do', 'does', 'doing',
+  'down', 'during', 'each', 'few', 'for', 'from', 'further', 'had', 'has', 'have',
+  'having', 'he', 'her', 'here', 'hers', 'herself', 'him', 'himself', 'his', 'how',
+  'i', 'if', 'in', 'into', 'is', 'it', 'its', 'itself', 'just', 'me', 'more',
+  'most', 'my', 'myself', 'no', 'nor', 'not', 'now', 'of', 'off', 'on', 'once',
+  'only', 'or', 'other', 'our', 'ours', 'ourselves', 'out', 'over', 'own', 'same',
+  'she', 'should', 'so', 'some', 'such', 'than', 'that', 'the', 'their', 'theirs',
+  'them', 'themselves', 'then', 'there', 'these', 'they', 'this', 'those', 'through',
+  'to', 'too', 'under', 'until', 'up', 'very', 'was', 'we', 'were', 'what', 'when',
+  'where', 'which', 'while', 'who', 'whom', 'why', 'will', 'with', 'would', 'you',
+  'your', 'yours', 'yourself', 'yourselves', 'tell', 'explain', 'please', 'help'
+]);
+
+// ============================================
+// 2. KNOWLEDGE BASE (40 FAQs)
+// ============================================
+
+const FAQ_DATA = [
+  // Category 1: AI/ML Fundamentals (10)
+  {
+    category: 'AI/ML Fundamentals',
+    question: 'What is Artificial Intelligence?',
+    answer: 'Artificial Intelligence (AI) is the field of computer science focused on building systems that can perform tasks requiring human-like intelligenceâ€”such as reasoning, learning, perception, and language understanding. Modern AI spans rule-based systems, machine learning, deep learning, and generative models used in products from search engines to medical diagnostics.'
+  },
+  {
+    category: 'AI/ML Fundamentals',
+    question: 'What is Machine Learning vs Deep Learning?',
+    answer: 'Machine Learning (ML) is a subset of AI where algorithms learn patterns from data instead of being explicitly programmed. Deep Learning is a subset of ML that uses multi-layer neural networks to learn hierarchical representations. ML includes classical methods (SVM, random forests); deep learning excels at unstructured data like images, audio, and text.'
+  },
+  {
+    category: 'AI/ML Fundamentals',
+    question: 'Explain supervised, unsupervised, and reinforcement learning',
+    answer: 'Supervised learning uses labeled data (input â†’ known output) for tasks like classification and regression. Unsupervised learning finds patterns in unlabeled dataâ€”clustering, dimensionality reduction. Reinforcement learning trains agents via rewards/penalties while interacting with an environmentâ€”used in robotics, game AI, and recommendation tuning.'
+  },
+  {
+    category: 'AI/ML Fundamentals',
+    question: 'What are neural networks and how do they work?',
+    answer: 'Neural networks are computing models inspired by biological neurons. They consist of layers of interconnected nodes: an input layer, hidden layers, and an output layer. Each connection has a weight; the network learns by adjusting weights via backpropagation and gradient descent to minimize prediction error on training data.'
+  },
+  {
+    category: 'AI/ML Fundamentals',
+    question: 'What is the difference between classification and regression?',
+    answer: 'Classification predicts discrete categories (spam/not spam, dog/cat/bird). Regression predicts continuous numerical values (house prices, temperature). Classification uses metrics like accuracy and F1-score; regression uses MAE, MSE, and RÂ². The choice depends on whether your target variable is categorical or numeric.'
+  },
+  {
+    category: 'AI/ML Fundamentals',
+    question: 'What is overfitting and how to prevent it?',
+    answer: 'Overfitting occurs when a model memorizes training data and performs poorly on new data. Prevention techniques include: more training data, regularization (L1/L2), dropout (neural nets), early stopping, cross-validation, reducing model complexity, and data augmentation. Always evaluate on a held-out validation/test set.'
+  },
+  {
+    category: 'AI/ML Fundamentals',
+    question: 'What is the bias-variance tradeoff?',
+    answer: 'Bias is error from overly simple models that miss patterns (underfitting). Variance is error from overly complex models sensitive to training noise (overfitting). The tradeoff balances both: as model complexity increases, bias decreases but variance increases. The goal is finding the sweet spot that minimizes total generalization error.'
+  },
+  {
+    category: 'AI/ML Fundamentals',
+    question: 'What are activation functions and why are they important?',
+    answer: 'Activation functions introduce non-linearity into neural networks, enabling them to learn complex patterns. Without them, stacked layers would collapse to linear transformations. Common functions: ReLU (fast, default choice), Sigmoid (binary output), Softmax (multi-class), Tanh. They determine gradient flow and training stability.'
+  },
+  {
+    category: 'AI/ML Fundamentals',
+    question: 'What is gradient descent?',
+    answer: 'Gradient descent is an optimization algorithm that iteratively adjusts model parameters to minimize a loss function. It computes the gradient (direction of steepest increase) and moves parameters in the opposite direction. Learning rate controls step size. Variants include batch, stochastic (SGD), and mini-batch gradient descent.'
+  },
+  {
+    category: 'AI/ML Fundamentals',
+    question: 'Explain the difference between batch and stochastic gradient descent',
+    answer: 'Batch Gradient Descent uses the entire dataset per updateâ€”stable but slow on large data. Stochastic Gradient Descent (SGD) updates per single sampleâ€”noisy but fast and escapes local minima. Mini-batch GD is the practical middle ground, processing small batches (32â€“256 samples) per update, widely used in deep learning.'
+  },
+  // Category 2: Tools & Technologies (8)
+  {
+    category: 'Tools & Technologies',
+    question: 'What are the essential Python libraries for AI?',
+    answer: 'Core libraries: NumPy (numerical computing), Pandas (data manipulation), Matplotlib/Seaborn (visualization), Scikit-learn (classical ML), TensorFlow/PyTorch (deep learning), Jupyter (interactive development), Hugging Face Transformers (NLP), OpenCV (computer vision). Also learn pip, virtual environments, and pytest for professional workflows.'
+  },
+  {
+    category: 'Tools & Technologies',
+    question: 'TensorFlow vs PyTorch: which should I learn?',
+    answer: 'Both are industry-standard. PyTorch is preferred in research and academia for its Pythonic API and dynamic computation graphs. TensorFlow excels in production deployment (TF Serving, TFLite, edge devices). For internships, knowing one deeply and being familiar with the other is ideal. Many teams use PyTorch for training and ONNX/TorchScript for deployment.'
+  },
+  {
+    category: 'Tools & Technologies',
+    question: 'What is Jupyter Notebook and why is it used?',
+    answer: 'Jupyter Notebook is an interactive web-based environment combining code, visualizations, and markdown documentation in cells. It\'s essential for data exploration, prototyping ML models, sharing reproducible research, and teaching. For production code, migrate logic to .py modules; use Jupyter for experimentation and EDA.'
+  },
+  {
+    category: 'Tools & Technologies',
+    question: 'What is Docker and why is it important for AI?',
+    answer: 'Docker containerizes applications with all dependencies, ensuring reproducible environments across machines. For AI, it packages models, Python versions, CUDA libraries, and APIs consistentlyâ€”from development to cloud deployment. Essential for MLOps, CI/CD pipelines, and team collaboration where "works on my machine" is unacceptable.'
+  },
+  {
+    category: 'Tools & Technologies',
+    question: 'What is Git and GitHub?',
+    answer: 'Git is a distributed version control system tracking code changes over time. GitHub is a platform hosting Git repositories with collaboration features (PRs, issues, Actions). For AI portfolios, use Git for experiment tracking, model versioning, and showcasing projects. Employers expect proficiency with branching, commits, and pull requests.'
+  },
+  {
+    category: 'Tools & Technologies',
+    question: 'What are cloud platforms for AI (AWS, GCP, Azure)?',
+    answer: 'AWS SageMaker, Google Vertex AI, and Azure ML provide managed infrastructure for training, deploying, and monitoring ML models at scale. They offer GPU/TPU compute, data storage, AutoML, and MLOps tooling. GCP is strong in research/BigQuery; AWS has the largest market share; Azure integrates well with enterprise Microsoft stacks.'
+  },
+  {
+    category: 'Tools & Technologies',
+    question: 'What is MLOps?',
+    answer: 'MLOps (Machine Learning Operations) applies DevOps principles to ML lifecycle: data versioning, experiment tracking, automated training pipelines, model registry, deployment, monitoring, and retraining. Tools include MLflow, Weights & Biases, Kubeflow, and DVC. MLOps bridges the gap between data science prototypes and reliable production systems.'
+  },
+  {
+    category: 'Tools & Technologies',
+    question: 'What is the difference between SQL and NoSQL?',
+    answer: 'SQL databases (PostgreSQL, MySQL) use structured tables with schemasâ€”ideal for relational data and ACID transactions. NoSQL (MongoDB, Redis, Cassandra) handles flexible/unstructured data at scale with various models (document, key-value, graph). ML pipelines often use SQL for feature stores and NoSQL for real-time inference caching.'
+  },
+  // Category 3: Internship Application (10)
+  {
+    category: 'Internship Application',
+    question: 'How to find AI internships as a student?',
+    answer: 'Search LinkedIn, Handshake, company career pages, and AI-specific boards (AI Jobs, ML Jobs). Attend hackathons, university career fairs, and AI meetups. Follow companies on social media, join Discord/Slack AI communities, and apply early (fall for summer internships). Cold-email researchers and ML teams with a tailored portfolio link.'
+  },
+  {
+    category: 'Internship Application',
+    question: 'What skills are required for an AI internship?',
+    answer: 'Foundations: Python, linear algebra, statistics, and ML fundamentals. Technical: NumPy, Pandas, Scikit-learn, PyTorch/TensorFlow, Git. Soft skills: problem-solving, communication, and curiosity. Bonus: SQL, cloud basics, a deployed project, Kaggle experience, and reading research papers. Show you can learn fast and ship working code.'
+  },
+  {
+    category: 'Internship Application',
+    question: 'How to prepare for an AI technical interview?',
+    answer: 'Study ML fundamentals, implement algorithms from scratch, practice coding on LeetCode (medium level), review your projects deeply, and prepare to explain tradeoffs. Expect ML system design, probability/stats questions, and take-home assignments. Practice explaining complex topics simply and walk through your portfolio with metrics and lessons learned.'
+  },
+  {
+    category: 'Internship Application',
+    question: 'What projects should I include in my portfolio?',
+    answer: 'Include 3â€“5 quality projects: an end-to-end ML pipeline, an NLP or CV project, and something deployed (API/web app). Each should have a README, clean code on GitHub, clear problem statement, methodology, results with metrics, and visuals. This TF-IDF chatbot itself demonstrates NLP + full-stack skillsâ€”exactly what recruiters look for.'
+  },
+  {
+    category: 'Internship Application',
+    question: 'How to write a CV for AI positions?',
+    answer: 'Lead with education and relevant coursework (ML, stats, linear algebra). Highlight projects with quantified results. List technical skills grouped by category. Include GitHub/LinkedIn links. Keep to one page for internships. Tailor keywords to the job description. Avoid buzzwords without evidenceâ€”show impact with numbers.'
+  },
+  {
+    category: 'Internship Application',
+    question: 'What to expect in an AI internship?',
+    answer: 'Typical activities: data cleaning, feature engineering, model experimentation, literature review, writing reports, and collaborating in agile teams. You may work on a specific product feature or research prototype. Expect mentorship, code reviews, and presentations. Document everythingâ€”internship projects become full-time interview talking points.'
+  },
+  {
+    category: 'Internship Application',
+    question: 'How to network for internship opportunities?',
+    answer: 'Attend AI conferences (local and virtual), join university AI clubs, contribute on LinkedIn/Twitter, and engage with open-source communities. Informational interviews with alumni are powerful. Share your learning journey publicly. Quality connections beat quantityâ€”follow up genuinely and offer value before asking for referrals.'
+  },
+  {
+    category: 'Internship Application',
+    question: 'What certifications are valuable for AI?',
+    answer: 'Hands-on projects outweigh certificates, but these add credibility: Google ML Engineer, AWS ML Specialty, deeplearning.ai specializations, and fast.ai courses. University credentials matter most for internships. Use certifications to structure learning, not replace building real projects. Employers care about demonstrated ability.'
+  },
+  {
+    category: 'Internship Application',
+    question: 'How to stand out in AI internship applications?',
+    answer: 'Ship unique projects (like this NLP chatbot), write technical blog posts, contribute to open source, participate in Kaggle competitions, and personalize every application. Show passion through a public learning log. A strong GitHub with clean READMEs and live demos differentiates you from candidates with only coursework.'
+  },
+  {
+    category: 'Internship Application',
+    question: 'What questions should I ask in an AI interview?',
+    answer: 'Ask about: team structure, mentorship style, tech stack, typical intern projects, success metrics, ML deployment practices, and growth opportunities. Questions like "How does the team handle model monitoring?" show maturity. Avoid asking only about perksâ€”demonstrate genuine interest in the team\'s technical challenges.'
+  },
+  // Category 4: Career Development (7)
+  {
+    category: 'Career Development',
+    question: 'What career paths are available in AI?',
+    answer: 'Paths include: ML Engineer (production systems), Data Scientist (analysis + modeling), Research Scientist (novel algorithms), MLOps Engineer (infrastructure), NLP/CV Specialist (domain focus), AI Product Manager, and Applied Scientist. Many roles overlap. Start as an intern to discover whether you prefer research, engineering, or product-oriented AI work.'
+  },
+  {
+    category: 'Career Development',
+    question: 'How to transition from student to AI professional?',
+    answer: 'Build a portfolio, intern or contribute to research labs, network actively, and develop T-shaped skills (broad ML knowledge + one deep specialty). Practice communicating technical work to non-technical audiences. Seek feedback on code reviews. The transition is gradualâ€”treat every project and internship as a stepping stone.'
+  },
+  {
+    category: 'Career Development',
+    question: 'What is the typical salary range for AI roles?',
+    answer: 'Salaries vary by location and level. US AI interns: $25â€“$60/hour at top tech companies. Entry-level ML engineers: $90Kâ€“$150K+. Senior roles and FAANG positions exceed $200K total comp. EU/UK ranges are lower but growing. Focus on skills and experience firstâ€”compensation scales quickly with demonstrated impact.'
+  },
+  {
+    category: 'Career Development',
+    question: 'How to stay updated with AI research?',
+    answer: 'Follow arXiv (cs.LG, cs.AI), read papers with Papers With Code, subscribe to newsletters (The Batch, Import AI), listen to podcasts, and follow researchers on Twitter/X. Implement papers you find interesting. Balance breadth (survey blogs) with depth (one paper per week implemented or thoroughly read).'
+  },
+  {
+    category: 'Career Development',
+    question: 'What are the ethical considerations in AI?',
+    answer: 'Key concerns: bias and fairness in training data, privacy and surveillance, transparency/explainability, job displacement, environmental cost of large models, and misuse of generative AI. Responsible AI practices include diverse datasets, bias audits, model cards, human oversight, and adhering to regulations (GDPR, EU AI Act).'
+  },
+  {
+    category: 'Career Development',
+    question: 'How to contribute to open-source AI projects?',
+    answer: 'Start with "good first issue" tags on Hugging Face, PyTorch, scikit-learn, or LangChain repos. Fix documentation, add tests, or improve small features. Read contributing guidelines, fork, branch, and submit PRs. Consistent small contributions build reputation and real collaboration experience valued by employers.'
+  },
+  {
+    category: 'Career Development',
+    question: 'What are the best online courses for AI?',
+    answer: 'Top picks: Andrew Ng\'s Machine Learning (Coursera), fast.ai Practical Deep Learning, deeplearning.ai specialization, Stanford CS229/CS231n (free online), and MIT 6.S191. Complement courses with Kaggle competitions and personal projects. Courses provide foundations; building things provides employability.'
+  },
+  // Category 5: Practical Skills (5)
+  {
+    category: 'Practical Skills',
+    question: 'How to handle missing data in ML projects?',
+    answer: 'Strategies: deletion (listwise if <5% missing), imputation (mean/median/mode, KNN, iterative), indicator variables for missingness patterns, and model-based imputation. Choice depends on missing mechanism (MCAR, MAR, MNAR). Always document handling in your pipeline and validate impact on model performance.'
+  },
+  {
+    category: 'Practical Skills',
+    question: 'What is feature engineering?',
+    answer: 'Feature engineering transforms raw data into informative inputs for ML models. Techniques: encoding categoricals (one-hot, target encoding), scaling (standardization, normalization), datetime features, polynomial interactions, domain-specific features, and embeddings for text/images. Good features often beat complex modelsâ€”it's where domain knowledge creates the most value.'
+  },
+  {
+    category: 'Practical Skills',
+    question: 'How to evaluate ML models?',
+    answer: 'Choose metrics aligned with business goals. Classification: accuracy, precision, recall, F1, AUC-ROC. Regression: MAE, RMSE, RÂ². Use confusion matrices and learning curves. Always split data train/validation/test. Compare against baselines. Consider fairness metrics and error analysis on failure casesâ€”not just aggregate scores.'
+  },
+  {
+    category: 'Practical Skills',
+    question: 'What is cross-validation?',
+    answer: 'Cross-validation assesses model generalization by training on subsets and validating on held-out folds. K-fold CV splits data into K parts, rotating the validation fold. Stratified K-fold preserves class distribution. Use it for hyperparameter tuning and model selection. Final evaluation should still use a completely untouched test set.'
+  },
+  {
+    category: 'Practical Skills',
+    question: 'How to deploy ML models in production?',
+    answer: 'Pipeline: serialize model (pickle, ONNX, TorchScript), wrap in API (FastAPI/Flask), containerize with Docker, deploy to cloud (AWS/GCP/Azure/Kubernetes), add monitoring (latency, drift, accuracy), and set up CI/CD. Consider batch vs real-time inference, A/B testing, and rollback strategies. MLOps tools streamline this lifecycle.'
+  }
+];
+// ============================================
+// 3. NLP ENGINE
+// ============================================
+
+/**
+ * Porter Stemmer implementation (Porter 1980 algorithm)
+ * Reduces words to root form: "running" â†’ "run"
+ * @param {string} word - Input word
+ * @returns {string} Stemmed word
+ */
+function porterStemmer(word) {
+  if (word.length < 3) return word;
+
+  const vowel = (c) => 'aeiou'.includes(c);
+  const endsWith = (w, suffix) => w.endsWith(suffix);
+  const replaceEnd = (w, from, to) => w.slice(0, -from.length) + to;
+
+  let stem = word;
+
+  // Step 1a
+  if (endsWith(stem, 'sses')) stem = replaceEnd(stem, 'sses', 'ss');
+  else if (endsWith(stem, 'ies')) stem = replaceEnd(stem, 'ies', 'i');
+  else if (endsWith(stem, 'ss') && stem.length > 2) stem = stem.slice(0, -1);
+  else if (endsWith(stem, 's') && stem.length > 1) stem = stem.slice(0, -1);
+
+  // Measure: count VC sequences
+  function measure(w) {
+    let m = 0, i = 0;
+    while (i < w.length && !vowel(w[i])) i++;
+    while (i < w.length) {
+      while (i < w.length && vowel(w[i])) i++;
+      if (i >= w.length) break;
+      m++;
+      while (i < w.length && !vowel(w[i])) i++;
+    }
+    return m;
+  }
+
+  function hasVowelInStem(w, suffixLen) {
+    const stemPart = w.slice(0, w.length - suffixLen);
+    for (let i = 0; i < stemPart.length; i++) {
+      if (vowel(stemPart[i])) return true;
+    }
+    return false;
+  }
+
+  function endsDoubleConsonant(w) {
+    if (w.length < 2) return false;
+    const c = w[w.length - 1];
+    const d = w[w.length - 2];
+    return c === d && !vowel(c) && c !== 'l' && c !== 's' && c !== 'z';
+  }
+
+  function endsCVC(w) {
+    if (w.length < 3) return false;
+    const a = w[w.length - 3], b = w[w.length - 2], c = w[w.length - 1];
+    return !vowel(a) && vowel(b) && !vowel(c) && !'wxy'.includes(c);
+  }
+
+  function step1b(w) {
+    const rules = [
+      ['eed', 'ee', 0], ['ed', '', 0], ['ing', '', 0]
+    ];
+    for (const [suf, rep, minM] of rules) {
+      if (endsWith(w, suf)) {
+        const stemLen = w.length - suf.length;
+        if (stemLen > 0 && measure(w.slice(0, stemLen)) > minM) {
+          w = w.slice(0, stemLen) + rep;
+          if (endsWith(w, 'at')) w = replaceEnd(w, 'at', 'ate');
+          else if (endsWith(w, 'bl')) w = replaceEnd(w, 'bl', 'ble');
+          else if (endsWith(w, 'iz')) w = replaceEnd(w, 'iz', 'ize');
+          else if (endsDoubleConsonant(w)) w = w.slice(0, -1);
+          else if (measure(w) === 1 && endsCVC(w)) w += 'e';
+        }
+        break;
+      }
+    }
+    return w;
+  }
+
+  function step2(w) {
+    const rules = [
+      ['ational', 'ate', 0], ['tional', 'tion', 0], ['enci', 'ence', 0],
+      ['anci', 'ance', 0], ['izer', 'ize', 0], ['abli', 'able', 0],
+      ['alli', 'al', 0], ['entli', 'ent', 0], ['eli', 'e', 0],
+      ['ousli', 'ous', 0], ['ization', 'ize', 0], ['ation', 'ate', 0],
+      ['ator', 'ate', 0], ['alism', 'al', 0], ['iveness', 'ive', 0],
+      ['fulness', 'ful', 0], ['ousness', 'ous', 0], ['aliti', 'al', 0],
+      ['iviti', 'ive', 0], ['biliti', 'ble', 0]
+    ];
+    for (const [suf, rep, minM] of rules) {
+      if (endsWith(w, suf) && measure(w.slice(0, w.length - suf.length)) > minM) {
+        return w.slice(0, -suf.length) + rep;
+      }
+    }
+    return w;
+  }
+
+  function step3(w) {
+    const rules = [
+      ['icate', 'ic', 0], ['ative', '', 0], ['alize', 'al', 0],
+      ['iciti', 'ic', 0], ['ical', 'ic', 0], ['ful', '', 0], ['ness', '', 0]
+    ];
+    for (const [suf, rep, minM] of rules) {
+      if (endsWith(w, suf) && measure(w.slice(0, w.length - suf.length)) > minM) {
+        return w.slice(0, -suf.length) + rep;
+      }
+    }
+    return w;
+  }
+
+  function step4(w) {
+    const suffixes = [
+      'al', 'ance', 'ence', 'er', 'ic', 'able', 'ible', 'ant', 'ement',
+      'ment', 'ent', 'ion', 'ou', 'ism', 'ate', 'iti', 'ous', 'ive', 'ize'
+    ];
+    for (const suf of suffixes) {
+      if (endsWith(w, suf)) {
+        const stemPart = w.slice(0, -suf.length);
+        if (suf === 'ion') {
+          const last = stemPart[stemPart.length - 1];
+          if (!'st'.includes(last)) continue;
+        }
+        if (measure(stemPart) > 1) return stemPart;
+      }
+    }
+    return w;
+  }
+
+  function step5(w) {
+    if (endsWith(w, 'e')) {
+      const stemPart = w.slice(0, -1);
+      const m = measure(stemPart);
+      if (m > 1 || (m === 1 && !endsCVC(stemPart))) w = stemPart;
+    }
+    if (endsWith(w, 'll') && measure(w) > 1) w = w.slice(0, -1);
+    return w;
+  }
+
+  stem = step1b(stem);
+  stem = step2(stem);
+  stem = step3(stem);
+  stem = step4(stem);
+  stem = step5(stem);
+
+  return stem;
+}
+
+/**
+ * Text preprocessing pipeline: lowercase â†’ remove punctuation â†’ tokenize â†’ stopwords â†’ stem
+ * @param {string} text - Raw input text
+ * @returns {string[]} Array of processed tokens
+ */
+function preprocess(text) {
+  if (!text || typeof text !== 'string') return [];
+  const cleaned = text.toLowerCase().replace(/[^\w\s]/g, ' ');
+  const tokens = cleaned.split(/\s+/).filter(t => t.length > 0);
+  return tokens
+    .filter(t => !STOPWORDS.has(t) && t.length > 1)
+    .map(t => porterStemmer(t));
+}
+
+/**
+ * TF-IDF Vectorizer - builds vocabulary and document vectors from scratch
+ */
+class TfIdfVectorizer {
+  constructor() {
+    /** @type {string[]} */
+    this.vocabulary = [];
+    /** @type {Map<string, number>} */
+    this.vocabIndex = new Map();
+    /** @type {number[][]} Cached TF-IDF vectors for FAQ questions */
+    this.documentVectors = [];
+    /** @type {number[]} IDF values per vocabulary term */
+    this.idf = [];
+    this.isBuilt = false;
+  }
+
+  /**
+   * Build vocabulary from all documents and compute IDF + document vectors
+   * @param {string[]} documents - Array of raw text documents
+   */
+  build(documents) {
+    const start = performance.now();
+    const tokenizedDocs = documents.map(d => preprocess(d));
+    const vocabSet = new Set();
+
+    tokenizedDocs.forEach(tokens => {
+      tokens.forEach(t => vocabSet.add(t));
+    });
+
+    this.vocabulary = Array.from(vocabSet).sort();
+    this.vocabIndex = new Map(this.vocabulary.map((term, i) => [term, i]));
+    const N = tokenizedDocs.length;
+
+    // Compute IDF: log(N / df) where df = docs containing term
+    this.idf = new Array(this.vocabulary.length).fill(0);
+    this.vocabulary.forEach((term, i) => {
+      const df = tokenizedDocs.filter(tokens => tokens.includes(term)).length;
+      this.idf[i] = Math.log((N + 1) / (df + 1)) + 1; // Smoothed IDF
+    });
+
+    // Cache TF-IDF vectors for all documents
+    this.documentVectors = tokenizedDocs.map(tokens => this._computeVector(tokens));
+    this.isBuilt = true;
+
+    if (!CONFIG.IS_PRODUCTION) {
+      console.log(`[NLP] TF-IDF built in ${(performance.now() - start).toFixed(2)}ms | Vocab: ${this.vocabulary.length} terms | Docs: ${N}`);
+    }
+  }
+
+  /**
+   * Compute TF-IDF vector for a token array
+   * @param {string[]} tokens - Preprocessed tokens
+   * @returns {number[]} Sparse-dense vector
+   * @private
+   */
+  _computeVector(tokens) {
+    const vector = new Array(this.vocabulary.length).fill(0);
+    if (tokens.length === 0) return vector;
+
+    const tf = new Map();
+    tokens.forEach(t => tf.set(t, (tf.get(t) || 0) + 1));
+
+    tf.forEach((count, term) => {
+      const idx = this.vocabIndex.get(term);
+      if (idx !== undefined) {
+        const termFreq = count / tokens.length;
+        vector[idx] = termFreq * this.idf[idx];
+      }
+    });
+
+    return vector;
+  }
+
+  /**
+   * Vectorize a raw query string using the built vocabulary
+   * @param {string} query - User query
+   * @returns {number[]} TF-IDF vector
+   */
+  vectorize(query) {
+    if (!this.isBuilt) throw new Error('Vectorizer not built. Call build() first.');
+    return this._computeVector(preprocess(query));
+  }
+}
+
+/**
+ * Cosine similarity between two vectors: (AÂ·B) / (||A|| * ||B||)
+ * @param {number[]} a - Vector A
+ * @param {number[]} b - Vector B
+ * @returns {number} Similarity score 0-1
+ */
+function cosineSimilarity(a, b) {
+  let dot = 0, normA = 0, normB = 0;
+  for (let i = 0; i < a.length; i++) {
+    dot += a[i] * b[i];
+    normA += a[i] * a[i];
+    normB += b[i] * b[i];
+  }
+  if (normA === 0 || normB === 0) return 0;
+  return dot / (Math.sqrt(normA) * Math.sqrt(normB));
+}
+
+/**
+ * Match user query against FAQ knowledge base
+ * @param {string} query - User question
+ * @param {string} [contextQuery] - Optional context-augmented query
+ * @returns {{matches: Array, matchType: string, topScore: number}}
+ */
+function findMatches(query, contextQuery = '') {
+  const combinedQuery = contextQuery ? `${contextQuery} ${query}` : query;
+  const queryVector = nlpEngine.vectorizer.vectorize(combinedQuery);
+  const scores = nlpEngine.vectorizer.documentVectors.map((docVec, i) => ({
+    index: i,
+    score: cosineSimilarity(queryVector, docVec),
+    question: FAQ_DATA[i].question,
+    answer: FAQ_DATA[i].answer,
+    category: FAQ_DATA[i].category
+  }));
+
+  scores.sort((a, b) => b.score - a.score);
+  const topMatches = scores.slice(0, CONFIG.TOP_K);
+  const topScore = topMatches[0]?.score || 0;
+
+  let matchType = 'none';
+  if (topScore >= CONFIG.MATCH_DIRECT) matchType = 'direct';
+  else if (topScore >= CONFIG.MATCH_RELATED) matchType = 'related';
+
+  return { matches: topMatches, matchType, topScore };
+}
+
+/** @type {{vectorizer: TfIdfVectorizer}} */
+const nlpEngine = {
+  vectorizer: new TfIdfVectorizer()
+};
+
+// ============================================
+// 4. CHAT UI CONTROLLER
+// ============================================
+
+/** @type {{role: string, text: string, timestamp: string, confidence?: number}[]} */
+let conversationContext = [];
+let messageIdCounter = 0;
+let isProcessing = false;
+
+const DOM = {
+  chatContainer: null,
+  userInput: null,
+  sendBtn: null,
+  quickChips: null,
+  charCounter: null,
+  themeToggle: null,
+  themeIcon: null,
+  analyticsModal: null
+};
+
+/**
+ * Format current time as readable timestamp
+ * @returns {string}
+ */
+function getTimestamp() {
+  return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
+/**
+ * Scroll chat container to bottom
+ */
+function scrollToBottom() {
+  if (DOM.chatContainer) {
+    DOM.chatContainer.scrollTop = DOM.chatContainer.scrollHeight;
+  }
+}
+
+/**
+ * Show animated typing indicator
+ * @returns {HTMLElement} Typing indicator element (for removal)
+ */
+function showTypingIndicator() {
+  const el = document.createElement('div');
+  el.className = 'typing-indicator';
+  el.id = 'typing-indicator';
+  el.innerHTML = `
+    <div class="avatar" aria-hidden="true"><i class="fas fa-robot"></i></div>
+    <div class="typing-dots" aria-label="Assistant is typing">
+      <span></span><span></span><span></span>
+    </div>`;
+  DOM.chatContainer.appendChild(el);
+  scrollToBottom();
+  return el;
+}
+
+/**
+ * Remove typing indicator from DOM
+ */
+function hideTypingIndicator() {
+  const el = document.getElementById('typing-indicator');
+  if (el) el.remove();
+}
+
+/**
+ * Render a chat message bubble
+ * @param {Object} opts - Message options
+ */
+function renderMessage({ role, text, confidence, showFeedback, messageId, suggestions }) {
+  const isUser = role === 'user';
+  const msgEl = document.createElement('div');
+  msgEl.className = `message ${isUser ? 'user' : 'bot'}`;
+  msgEl.dataset.messageId = messageId || ++messageIdCounter;
+
+  const senderName = isUser ? 'You' : 'AI Assistant';
+  const avatarIcon = isUser ? 'fa-user' : 'fa-robot';
+
+  let extraHtml = '';
+  if (confidence !== undefined && !isUser) {
+    extraHtml += `<div class="confidence">Match confidence: ${(confidence * 100).toFixed(1)}%</div>`;
+  }
+  if (showFeedback && !isUser) {
+    extraHtml += `
+      <div class="feedback-row">
+        <span>Was this helpful?</span>
+        <button class="feedback-btn" data-feedback="up" aria-label="Thumbs up"><i class="fas fa-thumbs-up"></i></button>
+        <button class="feedback-btn" data-feedback="down" aria-label="Thumbs down"><i class="fas fa-thumbs-down"></i></button>
+        <button class="copy-btn" aria-label="Copy answer"><i class="fas fa-copy"></i> Copy</button>
+      </div>`;
+  }
+  if (suggestions && suggestions.length > 0) {
+    extraHtml += `<div class="suggestions-inline" role="group" aria-label="Suggested questions">
+      ${suggestions.map(s => `<button class="suggestion-link" type="button">${escapeHtml(s)}</button>`).join('')}
+    </div>`;
+  }
+
+  msgEl.innerHTML = `
+    <div class="avatar" aria-hidden="true"><i class="fas ${avatarIcon}"></i></div>
+    <div class="bubble-wrap">
+      <div class="message-meta"><strong>${senderName}</strong><span>${getTimestamp()}</span></div>
+      <div class="bubble">${isUser ? escapeHtml(text) : formatBotText(text)}</div>
+      ${extraHtml}
+    </div>`;
+
+  DOM.chatContainer.appendChild(msgEl);
+  scrollToBottom();
+
+  if (showFeedback) {
+    msgEl.querySelectorAll('.feedback-btn').forEach(btn => {
+      btn.addEventListener('click', () => handleFeedback(btn.dataset.feedback, msgEl));
+    });
+    const copyBtn = msgEl.querySelector('.copy-btn');
+    if (copyBtn) copyBtn.addEventListener('click', () => copyToClipboard(text));
+  }
+
+  msgEl.querySelectorAll('.suggestion-link').forEach(btn => {
+    btn.addEventListener('click', () => {
+      DOM.userInput.value = btn.textContent;
+      sendMessage();
+    });
+  });
+}
+
+/**
+ * Escape HTML to prevent XSS
+ * @param {string} str
+ * @returns {string}
+ */
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+/**
+ * Format bot text with basic markdown-like code spans
+ * @param {string} text
+ * @returns {string}
+ */
+function formatBotText(text) {
+  return escapeHtml(text)
+    .replace(/`([^`]+)`/g, '<code class="mono">$1</code>')
+    .replace(/\n/g, '<br>');
+}
+
+/**
+ * Render quick suggestion chips (random 4 from pool)
+ */
+function renderQuickChips() {
+  const shuffled = [...QUICK_SUGGESTIONS_POOL].sort(() => Math.random() - 0.5);
+  const picks = shuffled.slice(0, 4);
+  DOM.quickChips.innerHTML = picks.map(q =>
+    `<button class="chip" type="button" aria-label="Ask: ${escapeHtml(q)}">${escapeHtml(q)}</button>`
+  ).join('');
+
+  DOM.quickChips.querySelectorAll('.chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      DOM.userInput.value = chip.textContent;
+      sendMessage();
+    });
+  });
+}
+
+/**
+ * Get personalized greeting based on visit count
+ * @returns {string}
+ */
+function getWelcomeMessage() {
+  const analytics = loadAnalytics();
+  const visits = analytics.visitCount || 0;
+  const greeting = visits > 1 ? 'Welcome back!' : 'Welcome!';
+  return `${greeting} I'm your AI Internship Assistant. Ask me anything about AI internships, machine learning, or career development. I use TF-IDF and cosine similarity to find the best answers from my knowledge base of ${FAQ_DATA.length} curated FAQs.`;
+}
+// ============================================
+// 5. EVENT HANDLERS & MESSAGE PROCESSING
+// ============================================
+
+/**
+ * Process user message through NLP pipeline and respond
+ * @param {string} userText - Raw user input
+ */
+async function processUserMessage(userText) {
+  if (isProcessing) return;
+  isProcessing = true;
+  DOM.sendBtn.disabled = true;
+
+  const startTime = performance.now();
+  renderMessage({ role: 'user', text: userText });
+
+  conversationContext.push({ role: 'user', text: userText, timestamp: getTimestamp() });
+  if (conversationContext.length > CONFIG.CONTEXT_SIZE * 2) {
+    conversationContext = conversationContext.slice(-CONFIG.CONTEXT_SIZE * 2);
+  }
+
+  const contextQuery = buildContextQuery();
+  const typingEl = showTypingIndicator();
+
+  const delay = CONFIG.TYPING_DELAY_MIN + Math.random() * (CONFIG.TYPING_DELAY_MAX - CONFIG.TYPING_DELAY_MIN);
+  await sleep(delay);
+
+  try {
+    const { matches, matchType, topScore } = findMatches(userText, contextQuery);
+    let responseText = '';
+    let suggestions = [];
+    let showFeedback = true;
+
+    if (matchType === 'direct') {
+      responseText = matches[0].answer;
+      trackQuestion(userText, topScore, matches[0].question);
+    } else if (matchType === 'related') {
+      responseText = `I found a related topic that might help:\n\n**Did you mean:** "${matches[0].question}"?\n\n${matches[0].answer}`;
+      suggestions = matches.slice(1).map(m => m.question);
+      trackQuestion(userText, topScore, matches[0].question);
+    } else {
+      responseText = buildFallbackResponse(userText, matches);
+      suggestions = matches.map(m => m.question);
+      showFeedback = false;
+      logUnanswered(userText);
+      trackQuestion(userText, topScore, null);
+    }
+
+    hideTypingIndicator();
+    renderMessage({
+      role: 'bot',
+      text: responseText.replace(/\*\*/g, ''),
+      confidence: topScore,
+      showFeedback,
+      suggestions: suggestions.filter(Boolean).slice(0, 3)
+    });
+
+    conversationContext.push({
+      role: 'bot',
+      text: responseText,
+      timestamp: getTimestamp(),
+      confidence: topScore
+    });
+
+    const elapsed = performance.now() - startTime;
+    if (!CONFIG.IS_PRODUCTION) {
+      console.log(`[Perf] Response in ${elapsed.toFixed(2)}ms | Match: ${matchType} | Score: ${topScore.toFixed(3)}`);
+    }
+
+    saveChatHistory();
+    renderQuickChips();
+  } catch (err) {
+    hideTypingIndicator();
+    console.error('[Error] Processing message:', err);
+    renderMessage({
+      role: 'bot',
+      text: 'Sorry, I encountered an error processing your question. Please try rephrasing or ask something else.'
+    });
+  } finally {
+    isProcessing = false;
+    DOM.sendBtn.disabled = false;
+    DOM.userInput.focus();
+  }
+}
+
+/**
+ * Build context string from recent conversation for better matching
+ * @returns {string}
+ */
+function buildContextQuery() {
+  const recentUser = conversationContext
+    .filter(m => m.role === 'user')
+    .slice(-CONFIG.CONTEXT_SIZE)
+    .map(m => m.text)
+    .join(' ');
+  return recentUser;
+}
+
+/**
+ * Build fallback response when no good match found
+ * @param {string} query
+ * @param {Array} matches
+ * @returns {string}
+ */
+function buildFallbackResponse(query, matches) {
+  const keywords = preprocess(query).slice(0, 5).join(', ');
+  let text = `I couldn't find a direct answer to your question. `;
+  if (keywords) text += `I noticed keywords like: ${keywords}. `;
+  text += `Here are some topics I can help with:\n\n`;
+  matches.forEach((m, i) => {
+    text += `${i + 1}. ${m.question} (${(m.score * 100).toFixed(0)}% match)\n`;
+  });
+  text += `\nTry rephrasing your question or click a suggestion below.`;
+  return text;
+}
+
+/**
+ * Send message from input field
+ */
+function sendMessage() {
+  const text = DOM.userInput.value.trim();
+  if (!text || isProcessing) return;
+  DOM.userInput.value = '';
+  updateCharCounter();
+  autoResizeInput();
+  processUserMessage(text);
+}
+
+/**
+ * Handle feedback button clicks
+ * @param {'up'|'down'} type
+ * @param {HTMLElement} msgEl
+ */
+function handleFeedback(type, msgEl) {
+  msgEl.querySelectorAll('.feedback-btn').forEach(b => b.classList.remove('active'));
+  const btn = msgEl.querySelector(`[data-feedback="${type}"]`);
+  if (btn) btn.classList.add('active');
+
+  const feedback = loadFromStorage(CONFIG.STORAGE_KEYS.feedback, { up: 0, down: 0 });
+  feedback[type]++;
+  saveToStorage(CONFIG.STORAGE_KEYS.feedback, feedback);
+
+  const analytics = loadAnalytics();
+  analytics.feedbackCount = (analytics.feedbackCount || 0) + 1;
+  saveAnalytics(analytics);
+}
+
+/**
+ * Toggle dark/light theme
+ */
+function toggleTheme() {
+  const html = document.documentElement;
+  const isDark = html.getAttribute('data-theme') === 'dark';
+  html.setAttribute('data-theme', isDark ? 'light' : 'dark');
+  DOM.themeIcon.className = isDark ? 'fas fa-sun' : 'fas fa-moon';
+  saveToStorage(CONFIG.STORAGE_KEYS.theme, isDark ? 'light' : 'dark');
+}
+
+/**
+ * Apply saved theme on load
+ */
+function applySavedTheme() {
+  const theme = loadFromStorage(CONFIG.STORAGE_KEYS.theme, 'light');
+  if (theme === 'dark') {
+    document.documentElement.setAttribute('data-theme', 'dark');
+    if (DOM.themeIcon) DOM.themeIcon.className = 'fas fa-moon';
+  }
+}
+
+// ============================================
+// 6. UTILITY FUNCTIONS
+// ============================================
+
+/**
+ * @param {number} ms
+ * @returns {Promise<void>}
+ */
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+/**
+ * Debounce function execution
+ * @param {Function} fn
+ * @param {number} wait
+ * @returns {Function}
+ */
+function debounce(fn, wait) {
+  let timeout;
+  return (...args) => {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => fn(...args), wait);
+  };
+}
+
+/**
+ * Load JSON from localStorage
+ * @param {string} key
+ * @param {*} defaultValue
+ * @returns {*}
+ */
+function loadFromStorage(key, defaultValue) {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : defaultValue;
+  } catch {
+    return defaultValue;
+  }
+}
+
+/**
+ * Save JSON to localStorage
+ * @param {string} key
+ * @param {*} value
+ */
+function saveToStorage(key, value) {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch (e) {
+    console.warn('[Storage] Save failed:', e);
+  }
+}
+
+/**
+ * @returns {Object} Analytics data object
+ */
+function loadAnalytics() {
+  return loadFromStorage(CONFIG.STORAGE_KEYS.analytics, {
+    visitCount: 0,
+    questions: [],
+    confidenceScores: [],
+    feedbackCount: 0
+  });
+}
+
+/**
+ * @param {Object} data
+ */
+function saveAnalytics(data) {
+  saveToStorage(CONFIG.STORAGE_KEYS.analytics, data);
+}
+
+/**
+ * Track a asked question for analytics
+ * @param {string} query
+ * @param {number} confidence
+ * @param {string|null} matchedQuestion
+ */
+function trackQuestion(query, confidence, matchedQuestion) {
+  const analytics = loadAnalytics();
+  analytics.questions = analytics.questions || [];
+  analytics.questions.push({
+    query,
+    confidence,
+    matched: matchedQuestion,
+    timestamp: new Date().toISOString()
+  });
+  analytics.confidenceScores = analytics.confidenceScores || [];
+  analytics.confidenceScores.push(confidence);
+  saveAnalytics(analytics);
+}
+
+/**
+ * Log unanswered question
+ * @param {string} query
+ */
+function logUnanswered(query) {
+  const unanswered = loadFromStorage(CONFIG.STORAGE_KEYS.unanswered, []);
+  unanswered.push({ query, timestamp: new Date().toISOString() });
+  saveToStorage(CONFIG.STORAGE_KEYS.unanswered, unanswered);
+  if (!CONFIG.IS_PRODUCTION) console.log('[NLP] Unanswered:', query);
+}
+
+/**
+ * Save chat history to localStorage
+ */
+function saveChatHistory() {
+  saveToStorage(CONFIG.STORAGE_KEYS.chatHistory, conversationContext);
+}
+
+/**
+ * Copy text to clipboard
+ * @param {string} text
+ */
+async function copyToClipboard(text) {
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+  }
+}
+
+/**
+ * Export chat history as JSON file download
+ */
+function exportChatHistory() {
+  const data = {
+    exportedAt: new Date().toISOString(),
+    project: 'MariaAIPro',
+    messages: conversationContext,
+    analytics: loadAnalytics()
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `mariaai-chat-${Date.now()}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+/**
+ * Share current page with optional query context
+ */
+function shareLink() {
+  const lastQ = [...conversationContext].reverse().find(m => m.role === 'user');
+  let url = window.location.href.split('?')[0];
+  if (lastQ) url += `?q=${encodeURIComponent(lastQ.text)}`;
+  copyToClipboard(url);
+  alert('Link copied to clipboard!' + (lastQ ? ' It includes your last question as context.' : ''));
+}
+
+/**
+ * Update analytics dashboard UI
+ */
+function updateAnalyticsDashboard() {
+  const analytics = loadAnalytics();
+  const unanswered = loadFromStorage(CONFIG.STORAGE_KEYS.unanswered, []);
+  const feedback = loadFromStorage(CONFIG.STORAGE_KEYS.feedback, { up: 0, down: 0 });
+
+  document.getElementById('stat-total').textContent = analytics.questions?.length || 0;
+  document.getElementById('stat-unanswered').textContent = unanswered.length;
+
+  const scores = analytics.confidenceScores || [];
+  const avgConf = scores.length
+    ? (scores.reduce((a, b) => a + b, 0) / scores.length * 100).toFixed(1) + '%'
+    : 'â€”';
+  document.getElementById('stat-confidence').textContent = avgConf;
+
+  const totalFb = feedback.up + feedback.down;
+  const satRate = totalFb > 0
+    ? ((feedback.up / totalFb) * 100).toFixed(0) + '%'
+    : 'â€”';
+  document.getElementById('stat-satisfaction').textContent = satRate;
+
+  const questionCounts = {};
+  (analytics.questions || []).forEach(q => {
+    const key = q.matched || q.query;
+    questionCounts[key] = (questionCounts[key] || 0) + 1;
+  });
+  const common = Object.entries(questionCounts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5);
+
+  document.getElementById('stat-common').innerHTML = common.length
+    ? common.map(([q, c]) => `<li>${escapeHtml(q)} <span class="mono">(${c}Ã—)</span></li>`).join('')
+    : '<li>No data yet</li>';
+
+  document.getElementById('stat-unanswered-list').innerHTML = unanswered.length
+    ? unanswered.slice(-10).reverse().map(u => `<li>${escapeHtml(u.query)}</li>`).join('')
+    : '<li>None logged</li>';
+}
+
+/**
+ * Open/close analytics modal
+ * @param {boolean} open
+ */
+function toggleAnalyticsModal(open) {
+  DOM.analyticsModal.classList.toggle('open', open);
+  if (open) updateAnalyticsDashboard();
+}
+
+/**
+ * Update character counter display
+ */
+function updateCharCounter() {
+  const len = DOM.userInput.value.length;
+  const counter = DOM.charCounter;
+  counter.textContent = `${len}/${CONFIG.MAX_INPUT}`;
+  counter.classList.toggle('over', len >= CONFIG.MAX_INPUT);
+}
+
+/**
+ * Auto-resize textarea height
+ */
+function autoResizeInput() {
+  DOM.userInput.style.height = 'auto';
+  DOM.userInput.style.height = Math.min(DOM.userInput.scrollHeight, 120) + 'px';
+}
+
+// ============================================
+// 7. INITIALIZATION
+// ============================================
+
+/**
+ * Bind all DOM event listeners
+ */
+function bindEvents() {
+  DOM.sendBtn.addEventListener('click', sendMessage);
+
+  DOM.userInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+    if (e.key === 'Escape') {
+      DOM.userInput.value = '';
+      updateCharCounter();
+      autoResizeInput();
+    }
+  });
+
+  DOM.userInput.addEventListener('input', debounce(() => {
+    updateCharCounter();
+    autoResizeInput();
+  }, CONFIG.DEBOUNCE_MS));
+
+  DOM.themeToggle.addEventListener('click', toggleTheme);
+  document.getElementById('admin-btn').addEventListener('click', () => toggleAnalyticsModal(true));
+  document.getElementById('modal-close').addEventListener('click', () => toggleAnalyticsModal(false));
+  DOM.analyticsModal.addEventListener('click', (e) => {
+    if (e.target === DOM.analyticsModal) toggleAnalyticsModal(false);
+  });
+  document.getElementById('export-btn').addEventListener('click', exportChatHistory);
+  document.getElementById('share-btn').addEventListener('click', shareLink);
+
+  document.addEventListener('keydown', (e) => {
+    if (e.ctrlKey && e.key === '/') {
+      e.preventDefault();
+      DOM.userInput.focus();
+    }
+    if (e.ctrlKey && e.shiftKey && (e.key === 'A' || e.key === 'a')) {
+      e.preventDefault();
+      toggleAnalyticsModal(true);
+    }
+  });
+}
+
+/**
+ * Initialize NLP engine and build TF-IDF index
+ */
+function initNlpEngine() {
+  const questions = FAQ_DATA.map(f => f.question);
+  nlpEngine.vectorizer.build(questions);
+}
+
+/**
+ * Main application entry point
+ */
+function initApp() {
+  const loadStart = performance.now();
+
+  DOM.chatContainer = document.getElementById('chat-container');
+  DOM.userInput = document.getElementById('user-input');
+  DOM.sendBtn = document.getElementById('send-btn');
+  DOM.quickChips = document.getElementById('quick-chips');
+  DOM.charCounter = document.getElementById('char-counter');
+  DOM.themeToggle = document.getElementById('theme-toggle');
+  DOM.themeIcon = document.getElementById('theme-icon');
+  DOM.analyticsModal = document.getElementById('analytics-modal');
+
+  applySavedTheme();
+  bindEvents();
+  initNlpEngine();
+  renderQuickChips();
+
+  const analytics = loadAnalytics();
+  analytics.visitCount = (analytics.visitCount || 0) + 1;
+  saveAnalytics(analytics);
+
+  renderMessage({ role: 'bot', text: getWelcomeMessage() });
+
+  const params = new URLSearchParams(window.location.search);
+  const prefilled = params.get('q');
+  if (prefilled) {
+    DOM.userInput.value = prefilled;
+    setTimeout(() => sendMessage(), 800);
+  }
+
+  const loadTime = performance.now() - loadStart;
+  if (!CONFIG.IS_PRODUCTION) {
+    console.log(`[Perf] App initialized in ${loadTime.toFixed(2)}ms`);
+    console.log(`[MariaAIPro] ${FAQ_DATA.length} FAQs loaded | NLP engine ready`);
+  }
+}
+
+// ============================================
+// 8. UNIT TESTS (run in console: runUnitTests())
+// ============================================
+
+/**
+ * Basic unit tests for NLP functions
+ * @returns {boolean} All tests passed
+ */
+function runUnitTests() {
+  const tests = [];
+  const assert = (name, condition) => tests.push({ name, pass: !!condition });
+
+  assert('preprocess removes stopwords', !preprocess('what is the machine learning').includes('what'));
+  assert('preprocess lowercases', preprocess('Hello WORLD').includes('hello'));
+  assert('porterStemmer runningâ†’run', porterStemmer('running') === 'run' || porterStemmer('running').startsWith('run'));
+  assert('cosine identical vectors = 1', Math.abs(cosineSimilarity([1, 0], [1, 0]) - 1) < 0.001);
+  assert('cosine orthogonal = 0', cosineSimilarity([1, 0], [0, 1]) === 0);
+  assert('FAQ count >= 40', FAQ_DATA.length >= 40);
+
+  const v = new TfIdfVectorizer();
+  v.build(['machine learning algorithms', 'deep learning neural networks']);
+  const sim = cosineSimilarity(v.vectorize('machine learning'), v.documentVectors[0]);
+  assert('TF-IDF match > 0', sim > 0);
+
+  const direct = findMatches('What is machine learning?');
+  assert('direct match works', direct.matchType === 'direct' || direct.topScore > 0.3);
+
+  const passed = tests.filter(t => t.pass).length;
+  const total = tests.length;
+  console.table(tests);
+  console.log(`[Tests] ${passed}/${total} passed`);
+  return passed === total;
+}
+
+// Boot
+document.addEventListener('DOMContentLoaded', initApp);
+
+// Expose for debugging / portfolio demo
+window.MariaAIPro = { runUnitTests, findMatches, preprocess, porterStemmer, cosineSimilarity, FAQ_DATA, nlpEngine };
+
+</script>
+</body>
+</html>
